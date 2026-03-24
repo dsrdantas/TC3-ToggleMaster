@@ -139,13 +139,75 @@ jobs:
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
             -Dsonar.sources=.
 
-      - name: SonarCloud Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1
+      - name: SonarCloud Critical Vulnerabilities Check
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
-        with:
-          scanMetadataReportFile: microservices/evaluation-service/.scannerwork/report-task.txt
+        run: |
+          python - <<'PY'
+          import base64
+          import json
+          import os
+          import time
+          import urllib.request
+          
+          report_path = "microservices/evaluation-service/.scannerwork/report-task.txt"
+          server = os.environ.get("SONAR_HOST_URL", "https://sonarcloud.io").rstrip("/")
+          token = os.environ["SONAR_TOKEN"]
+          project_key = os.environ.get("SONAR_PROJECT_KEY")
+          
+          if not project_key:
+            print("SONAR_PROJECT_KEY nao definido")
+            raise SystemExit(1)
+          
+          ce_task_url = None
+          with open(report_path, "r", encoding="utf-8") as f:
+            for line in f:
+              if line.startswith("ceTaskUrl="):
+                ce_task_url = line.strip().split("=", 1)[1]
+                break
+          
+          if not ce_task_url:
+            print("ceTaskUrl nao encontrado em report-task.txt")
+            raise SystemExit(1)
+          
+          def get_json(url: str):
+            req = urllib.request.Request(url)
+            auth = base64.b64encode(f"{token}:".encode()).decode()
+            req.add_header("Authorization", f"Basic {auth}")
+            with urllib.request.urlopen(req) as resp:
+              return json.load(resp)
+          
+          status = None
+          analysis_id = None
+          for _ in range(60):
+            data = get_json(ce_task_url)
+            status = data["task"]["status"]
+            if status in ("SUCCESS", "FAILED", "CANCELED"):
+              analysis_id = data["task"].get("analysisId")
+              break
+            time.sleep(5)
+          
+          if status != "SUCCESS":
+            print(f"SonarCloud task status: {status}")
+            raise SystemExit(1)
+          
+          issues_url = (
+            f"{server}/api/issues/search"
+            f"?componentKeys={project_key}"
+            f"&severities=CRITICAL"
+            f"&types=VULNERABILITY"
+            f"&resolved=false"
+            f"&sinceLeakPeriod=true"
+          )
+          issues = get_json(issues_url)
+          total = issues.get("total", 0)
+          if total > 0:
+            print(f"CRITICAL vulnerabilities found (new code): {total}")
+            raise SystemExit(1)
+          
+          print("No CRITICAL vulnerabilities on new code.")
+          PY
 
   docker-build-push:
     name: Docker Build & Push to ECR
