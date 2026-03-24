@@ -125,15 +125,22 @@ Comandos disponiveis:
 
 Opcao B — **Terraform plan/apply manual (avancado)**:
 ```bash
-# Terraform (infra + ArgoCD + secrets)
+# Fase 1: Terraform (infra + ArgoCD + apps + secrets)
 cd terraform
 terraform init -reconfigure
 terraform plan -var enable_apps=true -var enable_argocd_apps=true
 terraform apply -auto-approve -var enable_apps=true -var enable_argocd_apps=true
  
-# Instalar NGINX Ingress Controller
+# Fase 2: Instalar NGINX Ingress Controller
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0/deploy/static/provider/aws/deploy.yaml
 
+# Aguardar LBs (ArgoCD + NGINX) criarem hostname
+kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+# Fase 3: Criar DNS no Route53 (se habilitado)
+terraform apply -auto-approve
+ 
 # Aguardar pods e gerar API key
 kubectl get pods -n togglemaster -w
 ./scripts/setup-full.sh --gen-api-key
