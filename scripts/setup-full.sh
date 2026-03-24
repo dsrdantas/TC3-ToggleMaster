@@ -398,6 +398,8 @@ terraform_apply_flow() {
   fi
 
   configure_kubectl
+  install_ingress
+  wait_ingress_controller_service
 
   echo ""
   echo ">>> [3/7] Aplicando ArgoCD via helm com Terraform"
@@ -481,6 +483,18 @@ install_ingress() {
   echo "  [OK] NGINX Ingress instalado"
 }
 
+wait_ingress_controller_service() {
+  echo ">>> Aguardando Service ingress-nginx-controller..."
+  for i in $(seq 1 24); do
+    if "$KUBECTL_BIN" get svc ingress-nginx-controller -n ingress-nginx >/dev/null 2>&1; then
+      echo "  [OK] Service ingress-nginx-controller encontrado"
+      return
+    fi
+    echo "  aguardando... ($i/24)"
+    sleep 5
+  done
+  echo "WARN: Service ingress-nginx-controller nao encontrado; DNS pode falhar."
+}
 wait_pods_ready() {
   echo ""
   echo ">>> [6/7] Aguardando pods do ToggleMaster ficarem prontos..."
@@ -910,6 +924,5 @@ terraform_apply_flow
 cd "$PROJECT_DIR"
 
 build_and_push_images
-install_ingress
 wait_pods_ready
 generate_api_key

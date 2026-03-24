@@ -62,6 +62,43 @@ module "ecr" {
   repository_names = var.ecr_repository_names
   tags = var.tags
 }
+
+locals {
+  argocd_lb_dns = var.enable_route53 ? try(data.kubernetes_service_v1.argocd[0].status[0].load_balancer[0].ingress[0].hostname, "") : ""
+
+  nginx_lb_dns = var.enable_route53 ? try(data.kubernetes_service_v1.nginx[0].status[0].load_balancer[0].ingress[0].hostname, "") : ""
+
+  route53_records = concat(
+    var.enable_route53 && var.route53_domain_name != "" && var.route53_argocd_subdomain != "" && local.argocd_lb_dns != "" ? [
+      {
+        name    = "${var.route53_argocd_subdomain}.${var.route53_domain_name}"
+        type    = "CNAME"
+        ttl     = var.route53_record_ttl
+        records = [local.argocd_lb_dns]
+      }
+    ] : [],
+    var.enable_route53 && var.route53_domain_name != "" && var.route53_tc3_subdomain != "" && local.nginx_lb_dns != "" ? [
+      {
+        name    = "${var.route53_tc3_subdomain}.${var.route53_domain_name}"
+        type    = "CNAME"
+        ttl     = var.route53_record_ttl
+        records = [local.nginx_lb_dns]
+      }
+    ] : []
+  )
+}
+
+module "route53" {
+  source = "./modules/route53"
+  count  = var.enable_route53 ? 1 : 0
+
+  project_name  = var.project_name
+  domain_name   = var.route53_domain_name
+  comment       = var.route53_comment
+  force_destroy = var.route53_force_destroy
+  records       = local.route53_records
+  tags          = var.tags
+}
 module "apps" {
   source = "./modules/apps"
   count  = var.enable_apps ? 1 : 0

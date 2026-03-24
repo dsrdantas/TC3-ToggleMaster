@@ -53,3 +53,12 @@ aws_session_token     = ""
 # ArgoCD Apps (usado pelo setup-full para aplicar em duas etapas)
 enable_argocd_apps    = false
 enable_apps = true
+
+# Route53 (dominio registrado fora da AWS)
+enable_route53 = true
+route53_domain_name = "seuprojetopessoal.com.br"
+route53_comment = "Hosted zone ToggleMaster"
+route53_force_destroy = false
+route53_argocd_subdomain = "argocd"
+route53_tc3_subdomain = "tc3"
+route53_record_ttl = 300

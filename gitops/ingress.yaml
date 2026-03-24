@@ -8,7 +8,8 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - http:
+    - host: tc3.seuprojetopessoal.com.br
+      http:
         paths:
           - path: /auth(/|$)(.*)
             pathType: ImplementationSpecific

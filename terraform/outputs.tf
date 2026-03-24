@@ -7,6 +7,16 @@ output "eks_cluster_name" {
   value       = module.eks.cluster_name
 }
 
+output "route53_zone_id" {
+  description = "ID da hosted zone do Route53"
+  value       = var.enable_route53 ? module.route53[0].zone_id : ""
+}
+
+output "route53_name_servers" {
+  description = "Name servers para apontar no registrar externo"
+  value       = var.enable_route53 ? module.route53[0].name_servers : []
+}
+
 output "eks_cluster_endpoint" {
   description = "Endpoint do cluster EKS"
   value       = module.eks.cluster_endpoint

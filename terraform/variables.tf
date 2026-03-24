@@ -244,3 +244,45 @@ variable "enable_argocd_apps" {
   type        = bool
   default     = false
 }
+
+variable "enable_route53" {
+  description = "Habilita a criacao do hosted zone no Route53"
+  type        = bool
+  default     = false
+}
+
+variable "route53_domain_name" {
+  description = "Dominio raiz para o hosted zone (ex: exemplo.com)"
+  type        = string
+  default     = ""
+}
+
+variable "route53_comment" {
+  description = "Comentario do hosted zone"
+  type        = string
+  default     = ""
+}
+
+variable "route53_force_destroy" {
+  description = "Permite destruir o hosted zone mesmo com records"
+  type        = bool
+  default     = false
+}
+
+variable "route53_record_ttl" {
+  description = "TTL dos registros Route53"
+  type        = number
+  default     = 300
+}
+
+variable "route53_argocd_subdomain" {
+  description = "Subdominio para o ArgoCD (ex: argocd)"
+  type        = string
+  default     = "argocd"
+}
+
+variable "route53_tc3_subdomain" {
+  description = "Subdominio para o NGINX/Ingress (ex: tc3)"
+  type        = string
+  default     = "tc3"
+}
