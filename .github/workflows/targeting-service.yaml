@@ -1,4 +1,4 @@
-name: TC3 - Targeting Service
+name: Targeting Service
 
 on:
   push:
@@ -9,23 +9,6 @@ on:
     branches: [main]
     paths:
       - 'microservices/targeting-service/**'
-  workflow_dispatch:
-    inputs:
-      run_build:
-        description: 'Run Build & Unit Test'
-        required: false
-        default: true
-        type: boolean
-      run_lint:
-        description: 'Run Linter / Static Analysis'
-        required: false
-        default: true
-        type: boolean
-      run_security:
-        description: 'Run Security Scan (SAST & SCA)'
-        required: false
-        default: true
-        type: boolean
 
 env:
   SERVICE_NAME: targeting-service
@@ -35,7 +18,6 @@ env:
 jobs:
   build-and-test:
     name: Build & Unit Test
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_build == true || inputs.run_build == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -59,14 +41,6 @@ jobs:
   lint:
     name: Linter / Static Analysis
     needs: build-and-test
-    if: >-
-      ${{ always() &&
-          (
-            (github.event_name != 'workflow_dispatch' && needs.build-and-test.result == 'success') ||
-            (github.event_name == 'workflow_dispatch' &&
-             (inputs.run_lint == true || inputs.run_lint == 'true') &&
-             (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped'))
-          ) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -85,17 +59,9 @@ jobs:
       - name: Run flake8
         run: flake8 --max-line-length=120 .
 
-  sca:
-    name: Security Scan (SCA)
+  security-scan:
+    name: Security Scan (SAST & SCA)
     needs: lint
-    if: >-
-      ${{ always() &&
-          (
-            (github.event_name != 'workflow_dispatch' && needs.lint.result == 'success') ||
-            (github.event_name == 'workflow_dispatch' &&
-             (inputs.run_security == true || inputs.run_security == 'true') &&
-             (needs.lint.result == 'success' || needs.lint.result == 'skipped'))
-          ) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -115,166 +81,16 @@ jobs:
           scan-ref: 'microservices/targeting-service'
           severity: 'CRITICAL'
           exit-code: '1'
-  sast:
-    name: Security Scan (SAST - SonarCloud)
-    needs: lint
-    if: >-
-      ${{ always() &&
-          (
-            (github.event_name != 'workflow_dispatch' && needs.lint.result == 'success') ||
-            (github.event_name == 'workflow_dispatch' &&
-             (inputs.run_security == true || inputs.run_security == 'true') &&
-             (needs.lint.result == 'success' || needs.lint.result == 'skipped'))
-          ) }}
-    runs-on: ubuntu-latest
-    env:
-      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
-      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: SonarCloud Scan (SAST)
-        uses: sonarsource/sonarcloud-github-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: microservices/targeting-service
-          args: >
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
-            -Dsonar.sources=.
+      - name: SAST - Install bandit
+        run: pip install bandit
 
-      - name: SonarCloud Critical Vulnerabilities Check
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-        run: |
-          python - <<'PY'
-          import base64
-          import json
-          import os
-          import time
-          import urllib.request
-          
-          report_path = "microservices/targeting-service/.scannerwork/report-task.txt"
-          server = os.environ.get("SONAR_HOST_URL", "https://sonarcloud.io").rstrip("/")
-          token = os.environ["SONAR_TOKEN"]
-          project_key = os.environ.get("SONAR_PROJECT_KEY")
-          org = os.environ.get("SONAR_ORGANIZATION")
-          
-          if not project_key:
-            print("SONAR_PROJECT_KEY nao definido")
-            raise SystemExit(1)
-          
-          ce_task_url = None
-          with open(report_path, "r", encoding="utf-8") as f:
-            for line in f:
-              if line.startswith("ceTaskUrl="):
-                ce_task_url = line.strip().split("=", 1)[1]
-                break
-          
-          if not ce_task_url:
-            print("ceTaskUrl nao encontrado em report-task.txt")
-            raise SystemExit(1)
-          
-          def get_json(url: str):
-            req = urllib.request.Request(url)
-            auth = base64.b64encode(f"{token}:".encode()).decode()
-            req.add_header("Authorization", f"Basic {auth}")
-            try:
-              with urllib.request.urlopen(req) as resp:
-                return json.load(resp)
-            except urllib.error.HTTPError as e:
-              body = e.read().decode("utf-8", errors="ignore")
-              print(f"HTTP {e.code} for URL: {url}")
-              if body:
-                print(f"Response body: {body}")
-              raise
-          
-          status = None
-          analysis_id = None
-          for _ in range(60):
-            data = get_json(ce_task_url)
-            status = data["task"]["status"]
-            if status in ("SUCCESS", "FAILED", "CANCELED"):
-              analysis_id = data["task"].get("analysisId")
-              break
-            time.sleep(5)
-          
-          if status != "SUCCESS":
-            print(f"SonarCloud task status: {status}")
-            raise SystemExit(1)
-          
-          from urllib.parse import urlencode
-
-          issues_query = {
-            "componentKeys": project_key,
-            "severities": "CRITICAL,MAJOR",
-            "types": "VULNERABILITY",
-            "resolved": "false",
-            "sinceLeakPeriod": "true",
-          }
-          if org:
-            issues_query["organization"] = org
-          issues_url = f"{server}/api/issues/search?{urlencode(issues_query)}"
-          try:
-            issues = get_json(issues_url)
-          except Exception as e:
-            print(f"Erro ao consultar issues (new code): {e}")
-            # Fallback: se o leak period nao estiver definido, consulta sem sinceLeakPeriod
-            fallback_query = {
-              "componentKeys": project_key,
-              "severities": "CRITICAL,MAJOR",
-              "types": "VULNERABILITY",
-              "resolved": "false",
-            }
-            if org:
-              fallback_query["organization"] = org
-            fallback_url = f"{server}/api/issues/search?{urlencode(fallback_query)}"
-            issues = get_json(fallback_url)
-          total = issues.get("total", 0)
-          if total > 0:
-            print(f"MAJOR/CRITICAL vulnerabilities found (new code): {total}")
-            raise SystemExit(1)
-          
-          # Security Hotspots (API separada)
-          hotspot_query = {
-            "projectKey": project_key,
-            "status": "TO_REVIEW",
-            "sinceLeakPeriod": "true",
-          }
-          if org:
-            hotspot_query["organization"] = org
-          hotspot_url = f"{server}/api/hotspots/search?{urlencode(hotspot_query)}"
-          try:
-            hotspots = get_json(hotspot_url)
-          except Exception as e:
-            print(f"Erro ao consultar hotspots (new code): {e}")
-            fallback_hotspot_query = {
-              "projectKey": project_key,
-              "status": "TO_REVIEW",
-            }
-            if org:
-              fallback_hotspot_query["organization"] = org
-            fallback_hotspot_url = f"{server}/api/hotspots/search?{urlencode(fallback_hotspot_query)}"
-            hotspots = get_json(fallback_hotspot_url)
-
-          high_hotspots = [
-            h for h in hotspots.get("hotspots", [])
-            if h.get("vulnerabilityProbability") == "HIGH"
-          ]
-          if high_hotspots:
-            print(f"HIGH security hotspots found (new code): {len(high_hotspots)}")
-            raise SystemExit(1)
-
-          print("No MAJOR/CRITICAL vulnerabilities or HIGH hotspots on new code.")
-          PY
+      - name: SAST - Run bandit
+        run: bandit -r . --severity-level high
 
   docker-build-push:
     name: Docker Build & Push to ECR
-    needs: [sca, sast]
+    needs: security-scan
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
