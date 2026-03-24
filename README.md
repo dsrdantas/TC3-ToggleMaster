@@ -136,7 +136,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/cont
 
 # Aguardar pods e gerar API key
 kubectl get pods -n togglemaster -w
-./scripts/generate-api-key.sh
+./scripts/setup-full.sh --gen-api-key
 ```
 
 > **Nota:** Os secrets Kubernetes são gerenciados pelo Terraform (módulo `apps`), não há arquivos `secret.yaml` no git.
