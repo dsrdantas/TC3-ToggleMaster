@@ -128,9 +128,6 @@ jobs:
              (needs.lint.result == 'success' || needs.lint.result == 'skipped'))
           ) }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: microservices/analytics-service
     steps:
       - uses: actions/checkout@v4
         with:
