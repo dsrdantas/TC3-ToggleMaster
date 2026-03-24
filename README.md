@@ -194,9 +194,6 @@ No GitHub: Settings > Secrets and variables > Actions:
 | `AWS_SESSION_TOKEN` | Session Token |
 | `AWS_REGION` | Regiao AWS (ex: us-east-1) |
 | `ECR_REGISTRY` | `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com` |
-| `SONAR_TOKEN` | Token do SonarCloud |
-| `SONAR_ORGANIZATION` | Organization Key do SonarCloud |
-| `SONAR_PROJECT_KEY` | Project Key do SonarCloud |
 
 > **IMPORTANTE:** Atualizar `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_SESSION_TOKEN` a cada nova sessao AWS Academy.
 
@@ -220,8 +217,8 @@ Push (microservices/<service>/**)
   ├── 3. Security Scan (SCA)
   │     SCA: Trivy filesystem scan (falha se CRITICAL)
   │
-  ├── 4. Security Scan (SAST)
-  │     SAST: SonarCloud (Quality Gate)
+  ├── 4. Security Scan (SCA)
+  │     SCA: Trivy filesystem scan (falha se CRITICAL)
   │
   ├── 5. Docker Build & Push to ECR
   │     Build imagem → Trivy container scan → Push ECR (tag: <commit-sha>)
@@ -230,27 +227,6 @@ Push (microservices/<service>/**)
         Atualiza image tag em gitops/<service>/deployment.yaml
         Commit automatico via github-actions[bot]
 ```
-
-### SonarCloud: Quality Gate e Variaveis
-
-**Onde pegar os valores (SonarCloud):**
-1. **Organization Key**  
-   SonarCloud → Organization → Administration → Organization Settings → **Organization Key**  
-   (URL tipico: `https://sonarcloud.io/organizations/<orgKey>`)
-
-2. **Project Key**  
-   SonarCloud → Project → Administration → Project Settings → **General** → **Project Key**
-
-3. **Token**  
-   SonarCloud → My Account → Security → **Generate Token**
-
-**Como configurar o Quality Gate para bloquear em CRITICAL:**
-1. SonarCloud → **Quality Gates** → selecione o gate desejado (ou crie um novo).
-2. Adicione/ajuste a condicao **Security Rating** ou **New Vulnerabilities** para **Critical**.
-3. Associe o Quality Gate ao projeto em:  
-   Project → Administration → **Quality Gate**.
-
-> O pipeline falha quando o Quality Gate reprova. Mantenha o gate configurado para bloquear CRITICAL.
 
 ---
 
