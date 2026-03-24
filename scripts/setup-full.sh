@@ -246,6 +246,21 @@ PY
   fi
 }
 
+tfvars_get_bool() {
+  local key="$1"
+  if [ ! -f "$TFVARS_FILE" ]; then
+    echo ""
+    return
+  fi
+  local v
+  v=$(grep -m1 "^${key}\\b" "$TFVARS_FILE" 2>/dev/null | awk -F'=' '{gsub(/[[:space:]]/,"",$2); print $2}')
+  if [ -n "$v" ]; then
+    echo "$(echo "$v" | tr '[:upper:]' '[:lower:]')"
+  else
+    echo ""
+  fi
+}
+
 ensure_backend() {
   echo ">>> [1/7] Terraform (backend + plan + apply)..."
 
@@ -380,10 +395,20 @@ terraform_plan_flow() {
 }
 
 terraform_apply_flow() {
+  ENABLE_ROUTE53=$(tfvars_get_bool "enable_route53")
+  ROUTE53_ENABLED=false
+  if [ "$ENABLE_ROUTE53" = "true" ]; then
+    ROUTE53_ENABLED=true
+  fi
+
   if has_module_apps; then
     echo "  [OK] module.apps encontrado no state. Pulando apply infra com enable_apps=false para evitar destroy."
   else
-    tf_apply "infra" -var enable_apps=false
+    if [ "$ROUTE53_ENABLED" = "true" ]; then
+      tf_apply "infra" -var enable_apps=false -var enable_route53=false
+    else
+      tf_apply "infra" -var enable_apps=false
+    fi
   fi
 
   configure_kubectl
@@ -392,7 +417,11 @@ terraform_apply_flow() {
 
   echo ""
   echo ">>> [3/7] Aplicando ArgoCD via helm com Terraform"
-  tf_apply "argocd" -var enable_apps=true -var enable_argocd_apps=false
+  if [ "$ROUTE53_ENABLED" = "true" ]; then
+    tf_apply "argocd" -var enable_apps=true -var enable_argocd_apps=false -var enable_route53=false
+  else
+    tf_apply "argocd" -var enable_apps=true -var enable_argocd_apps=false
+  fi
 
   echo ""
   echo ">>> Aguardando CRDs do ArgoCD..."
@@ -406,7 +435,11 @@ terraform_apply_flow() {
   done
 
   echo ">>> Aplicando Applications do ArgoCD via Terraform..."
-  tf_apply "apps" -var enable_apps=true -var enable_argocd_apps=true
+  if [ "$ROUTE53_ENABLED" = "true" ]; then
+    tf_apply "apps" -var enable_apps=true -var enable_argocd_apps=true -var enable_route53=false
+  else
+    tf_apply "apps" -var enable_apps=true -var enable_argocd_apps=true
+  fi
 }
 
 build_and_push_images() {
@@ -483,6 +516,25 @@ wait_ingress_controller_service() {
     sleep 5
   done
   echo "WARN: Service ingress-nginx-controller nao encontrado; DNS pode falhar."
+}
+
+wait_lb_hostname() {
+  local ns="$1"
+  local svc="$2"
+  local label="$3"
+  echo ">>> Aguardando hostname do LoadBalancer ($label)..."
+  for i in $(seq 1 60); do
+    local host
+    host=$("$KUBECTL_BIN" get svc "$svc" -n "$ns" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+    if [ -n "$host" ]; then
+      echo "  [OK] $label: $host"
+      return 0
+    fi
+    echo "  aguardando... ($i/60)"
+    sleep 5
+  done
+  echo "WARN: hostname do LoadBalancer ($label) ainda indisponivel."
+  return 1
 }
 wait_pods_ready() {
   echo ""
@@ -915,3 +967,11 @@ cd "$PROJECT_DIR"
 build_and_push_images
 wait_pods_ready
 generate_api_key
+
+if [ "${ROUTE53_ENABLED:-false}" = "true" ]; then
+  wait_lb_hostname argocd argocd-server "ArgoCD"
+  wait_lb_hostname ingress-nginx ingress-nginx-controller "NGINX Ingress"
+  echo ""
+  echo ">>> Aplicando Route53 (DNS)..."
+  tf_apply "route53" -var enable_route53=true -var enable_apps=true -var enable_argocd_apps=true
+fi
