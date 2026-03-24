@@ -131,6 +131,8 @@ PY
     fi
   fi
 
+  export AWS_OLD
+
   KUBECTL_TARGET_VER="${KUBECTL_TARGET_VER:-}"
   if [ -z "$KUBECTL_TARGET_VER" ]; then
     if [ "${AWS_OLD:-false}" = "true" ]; then
