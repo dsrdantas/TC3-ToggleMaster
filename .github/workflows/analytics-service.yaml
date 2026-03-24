@@ -184,8 +184,15 @@ jobs:
             req = urllib.request.Request(url)
             auth = base64.b64encode(f"{token}:".encode()).decode()
             req.add_header("Authorization", f"Basic {auth}")
-            with urllib.request.urlopen(req) as resp:
-              return json.load(resp)
+            try:
+              with urllib.request.urlopen(req) as resp:
+                return json.load(resp)
+            except urllib.error.HTTPError as e:
+              body = e.read().decode("utf-8", errors="ignore")
+              print(f"HTTP {e.code} for URL: {url}")
+              if body:
+                print(f"Response body: {body}")
+              raise
           
           status = None
           analysis_id = None
@@ -201,30 +208,32 @@ jobs:
             print(f"SonarCloud task status: {status}")
             raise SystemExit(1)
           
-          from urllib.parse import quote_plus
+          from urllib.parse import urlencode
 
-          issues_url = (
-            f"{server}/api/issues/search"
-            f"?componentKeys={quote_plus(project_key)}"
-            f"{'&organization=' + quote_plus(org) if org else ''}"
-            f"&severities=CRITICAL,HIGH"
-            f"&types=VULNERABILITY"
-            f"&resolved=false"
-            f"&sinceLeakPeriod=true"
-          )
+          issues_query = {
+            "componentKeys": project_key,
+            "severities": "CRITICAL,HIGH",
+            "types": "VULNERABILITY",
+            "resolved": "false",
+            "sinceLeakPeriod": "true",
+          }
+          if org:
+            issues_query["organization"] = org
+          issues_url = f"{server}/api/issues/search?{urlencode(issues_query)}"
           try:
             issues = get_json(issues_url)
           except Exception as e:
             print(f"Erro ao consultar issues (new code): {e}")
             # Fallback: se o leak period nao estiver definido, consulta sem sinceLeakPeriod
-            fallback_url = (
-              f"{server}/api/issues/search"
-              f"?componentKeys={quote_plus(project_key)}"
-              f"{'&organization=' + quote_plus(org) if org else ''}"
-              f"&severities=CRITICAL,HIGH"
-              f"&types=VULNERABILITY"
-              f"&resolved=false"
-            )
+            fallback_query = {
+              "componentKeys": project_key,
+              "severities": "CRITICAL,HIGH",
+              "types": "VULNERABILITY",
+              "resolved": "false",
+            }
+            if org:
+              fallback_query["organization"] = org
+            fallback_url = f"{server}/api/issues/search?{urlencode(fallback_query)}"
             issues = get_json(fallback_url)
           total = issues.get("total", 0)
           if total > 0:
