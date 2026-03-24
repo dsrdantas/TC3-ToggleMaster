@@ -1,6 +1,6 @@
 """
 Arquivo de teste para validar SAST no SonarCloud.
-Remover apos o teste. 
+Remover apos o teste.
 """
 
 import psycopg2
