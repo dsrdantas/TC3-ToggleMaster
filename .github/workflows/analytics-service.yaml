@@ -212,7 +212,7 @@ jobs:
 
           issues_query = {
             "componentKeys": project_key,
-            "severities": "CRITICAL,HIGH",
+            "severities": "CRITICAL,MAJOR",
             "types": "VULNERABILITY",
             "resolved": "false",
             "sinceLeakPeriod": "true",
@@ -227,7 +227,7 @@ jobs:
             # Fallback: se o leak period nao estiver definido, consulta sem sinceLeakPeriod
             fallback_query = {
               "componentKeys": project_key,
-              "severities": "CRITICAL,HIGH",
+              "severities": "CRITICAL,MAJOR",
               "types": "VULNERABILITY",
               "resolved": "false",
             }
@@ -237,10 +237,10 @@ jobs:
             issues = get_json(fallback_url)
           total = issues.get("total", 0)
           if total > 0:
-            print(f"HIGH/CRITICAL vulnerabilities found (new code): {total}")
+            print(f"MAJOR/CRITICAL vulnerabilities found (new code): {total}")
             raise SystemExit(1)
           
-          print("No HIGH/CRITICAL vulnerabilities on new code.")
+          print("No MAJOR/CRITICAL vulnerabilities on new code.")
           PY
 
   docker-build-push:
