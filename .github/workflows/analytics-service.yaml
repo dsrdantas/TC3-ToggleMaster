@@ -202,7 +202,7 @@ jobs:
           issues_url = (
             f"{server}/api/issues/search"
             f"?componentKeys={project_key}"
-            f"&severities=CRITICAL"
+            f"&severities=CRITICAL,HIGH"
             f"&types=VULNERABILITY"
             f"&resolved=false"
             f"&sinceLeakPeriod=true"
@@ -210,10 +210,10 @@ jobs:
           issues = get_json(issues_url)
           total = issues.get("total", 0)
           if total > 0:
-            print(f"CRITICAL vulnerabilities found (new code): {total}")
+            print(f"HIGH/CRITICAL vulnerabilities found (new code): {total}")
             raise SystemExit(1)
           
-          print("No CRITICAL vulnerabilities on new code.")
+          print("No HIGH/CRITICAL vulnerabilities on new code.")
           PY
 
   docker-build-push:
