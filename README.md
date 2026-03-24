@@ -141,6 +141,12 @@ kubectl get pods -n togglemaster -w
 
 > **Nota:** Os secrets Kubernetes são gerenciados pelo Terraform (módulo `apps`), não há arquivos `secret.yaml` no git.
 
+### Como destruir o ambiente
+
+```bash
+./scripts/setup-full.sh --destroy-all
+```
+
 ### Passo 4: Verificar tudo rodando
 
 ```bash

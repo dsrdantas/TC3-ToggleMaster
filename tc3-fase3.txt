@@ -4,3 +4,21 @@ Thiago Viegas RM367590 - Discord: oviegas_60314
 
 Repo: 
 https://github.com/dsrdantas/TC3-ToggleMaster
+
+
+Documentação e estrutura: https://github.com/dsrdantas/TC3-ToggleMaster/blob/main/README.md
+Video:
+Print estimativa de custos: 
+
+Breve resumo dos desafios encontrados e decisões tomadas.
+
+Desafios encontrados:
+
+Desafio com token do AWS Academy sendo necessário atualiza-los constantemente.
+Desafio com o SonarQube Cloud Free tier por conta de não ser possivel criar seu proprio profile de Quality Gate
+Desafio com o shell do AWS Academy que utiliza um awscli antigo causando incompatibilidade com kubectl/helm para aplicar manifestos do cluster EKS
+
+Soluções:
+
+Para o token do AWS Academy e os binarios obsoletos o script setup-full.sh faz uma validação antes de executar e ajuda para funcionar no shell fornecido pelo AWS Academy.
+Para o SonarQube foi criado um script para consultar a API e verificar se existem vulberabilidades criticas dessa forma é possivel utilizar a ferramenta.
