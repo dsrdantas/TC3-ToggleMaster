@@ -346,13 +346,19 @@ configure_kubectl() {
     python3 - <<PY 2>/dev/null || true
 import os
 path = os.path.expanduser("~/.kube/config")
+aws_old = os.environ.get("AWS_OLD", "false").lower() == "true"
 try:
     with open(path, "r", encoding="utf-8") as f:
         data = f.read()
-    if "client.authentication.k8s.io/v1alpha1" in data:
-        data = data.replace("client.authentication.k8s.io/v1alpha1", "client.authentication.k8s.io/v1beta1")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(data)
+    # Se AWS CLI for antigo, mantenha v1alpha1; caso contrario, use v1beta1
+    if aws_old:
+        if "client.authentication.k8s.io/v1beta1" in data:
+            data = data.replace("client.authentication.k8s.io/v1beta1", "client.authentication.k8s.io/v1alpha1")
+    else:
+        if "client.authentication.k8s.io/v1alpha1" in data:
+            data = data.replace("client.authentication.k8s.io/v1alpha1", "client.authentication.k8s.io/v1beta1")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(data)
 except FileNotFoundError:
     pass
 PY
