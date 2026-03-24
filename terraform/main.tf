@@ -88,6 +88,11 @@ resource "aws_route53_record" "argocd_cname" {
   type    = "CNAME"
   ttl     = var.route53_record_ttl
   records = [local.argocd_lb_dns]
+
+  depends_on = [
+    module.apps,
+    time_sleep.wait_for_lb
+  ]
 }
 
 resource "aws_route53_record" "nginx_cname" {
@@ -98,6 +103,11 @@ resource "aws_route53_record" "nginx_cname" {
   type    = "CNAME"
   ttl     = var.route53_record_ttl
   records = [local.nginx_lb_dns]
+
+  depends_on = [
+    module.apps,
+    time_sleep.wait_for_lb
+  ]
 }
 module "apps" {
   source = "./modules/apps"
