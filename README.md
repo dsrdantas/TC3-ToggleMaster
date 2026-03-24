@@ -26,6 +26,7 @@ TC3-ToggleMaster/
 │       ├── databases/      # 3x RDS PostgreSQL + Redis + DynamoDB
 │       ├── messaging/      # Fila SQS
 │       ├── ecr/            # 5 repositorios ECR
+│       ├── route53/        # Hosted Zone + DNS
 │       └── apps/           # ArgoCD + Secrets + Applications (GitOps)
 ├── microservices/          # Codigo fonte dos 5 microsservicos
 │   ├── auth-service/       # Go 1.21 - Gerenciamento de API keys (porta 8001)
@@ -53,7 +54,7 @@ TC3-ToggleMaster/
 │   ├── setup-full.sh       # Setup completo (orquestra tudo)
 │   ├── destroy-all.sh      # Destruir tudo criado via Terraform
 │   ├── aws-academy-setup.sh# Configura/valida credenciais AWS Academy
-│   ├── generate-api-key.sh # Gera SERVICE_API_KEY via auth-service
+│   ├── generate-api-key.sh # Wrapper (usa setup-full.sh --gen-api-key)
 │   └── generate-report-pdf.py  # Gera relatorio de entrega em PDF
 └── .gitignore              # Arquivos ignorados
 ```
@@ -106,12 +107,21 @@ Edite o arquivo com suas variáveis (ex.: `lab_role_arn`, `db_password`, `cluste
 
 Opcao A — **Setup completo automatizado** (recomendado):
 ```bash
-./scripts/setup-full.sh
+./scripts/setup-full.sh --create
 ```
 Este script executa os passos principais: valida ferramentas, aplica Terraform (infra + ArgoCD + apps), configura kubectl, cria secrets via Terraform, atualiza placeholders, faz build/push (se tiver acesso ao Docker), instala NGINX Ingress e gera a SERVICE_API_KEY.  
 Ele foi pensado para ser executado diretamente no shell do AWS Academy.
 
 > **Nota:** O build/push pode ser pulado — o script detecta se as imagens ja existem no ECR e faz o build automaticamente se necessario.
+
+Comandos disponiveis:
+```bash
+./scripts/setup-full.sh --plan        # Somente terraform plan
+./scripts/setup-full.sh --apply       # Somente terraform apply
+./scripts/setup-full.sh --create      # Plan + Apply + etapas adicionais
+./scripts/setup-full.sh --gen-api-key # Gera somente a SERVICE_API_KEY
+./scripts/setup-full.sh --destroy-all # Remove toda a infra
+```
 
 Opcao B — **Terraform plan/apply manual (avancado)**:
 ```bash
@@ -146,6 +156,27 @@ kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingre
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
 ```
 
+### Passo 4.1: DNS (Route53 + registrador externo)
+
+Se o dominio foi registrado fora da AWS, habilite o Route53 no `terraform.tfvars`:
+```hcl
+enable_route53 = true
+route53_domain_name = "seuprojetopessoal.com.br"
+route53_argocd_subdomain = "argocd"
+route53_tc3_subdomain = "tc3"
+```
+
+O Terraform cria automaticamente:
+- `argocd.seuprojetopessoal.com.br` → CNAME para o LoadBalancer do ArgoCD
+- `tc3.seuprojetopessoal.com.br` → CNAME para o LoadBalancer do NGINX Ingress
+
+Depois do `terraform apply`, obtenha os **name servers** para configurar no seu registrador:
+```bash
+terraform output route53_name_servers
+```
+
+> **Nota:** Existe um delay de 120s antes do Terraform buscar o hostname dos LBs. Se o hostname ainda nao estiver disponivel, rode `terraform apply` novamente.
+
 ### Passo 5: Configurar GitHub Secrets para CI/CD
 
 No GitHub: Settings > Secrets and variables > Actions:
@@ -156,6 +187,9 @@ No GitHub: Settings > Secrets and variables > Actions:
 | `AWS_SECRET_ACCESS_KEY` | Secret Key |
 | `AWS_SESSION_TOKEN` | Session Token |
 | `ECR_REGISTRY` | `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com` |
+| `SONAR_TOKEN` | Token do SonarCloud |
+| `SONAR_ORGANIZATION` | Organization Key do SonarCloud |
+| `SONAR_PROJECT_KEY` | Project Key do SonarCloud |
 
 > **IMPORTANTE:** Atualizar `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_SESSION_TOKEN` a cada nova sessao AWS Academy.
 
@@ -176,14 +210,16 @@ Push (microservices/<service>/**)
   │     Go: golangci-lint v1.61
   │     Python: flake8
   │
-  ├── 3. Security Scan (SAST & SCA)
-  │     SCA: Trivy filesystem scan (CRITICAL + HIGH)
-  │     SAST: gosec v2.20.0 (Go) / bandit (Python)
+  ├── 3. Security Scan (SCA)
+  │     SCA: Trivy filesystem scan (falha se CRITICAL)
   │
-  ├── 4. Docker Build & Push to ECR
+  ├── 4. Security Scan (SAST)
+  │     SAST: SonarCloud (Quality Gate)
+  │
+  ├── 5. Docker Build & Push to ECR
   │     Build imagem → Trivy container scan → Push ECR (tag: <commit-sha>)
   │
-  └── 5. Update GitOps Manifests
+  └── 6. Update GitOps Manifests
         Atualiza image tag em gitops/<service>/deployment.yaml
         Commit automatico via github-actions[bot]
 ```
