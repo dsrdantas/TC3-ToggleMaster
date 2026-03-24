@@ -25,14 +25,3 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
-
-variable "records" {
-  description = "Lista de records DNS a criar no hosted zone"
-  type = list(object({
-    name    = string
-    type    = string
-    ttl     = number
-    records = list(string)
-  }))
-  default = []
-}

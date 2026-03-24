@@ -67,25 +67,6 @@ locals {
   argocd_lb_dns = var.enable_route53 ? try(data.kubernetes_service_v1.argocd[0].status[0].load_balancer[0].ingress[0].hostname, "") : ""
 
   nginx_lb_dns = var.enable_route53 ? try(data.kubernetes_service_v1.nginx[0].status[0].load_balancer[0].ingress[0].hostname, "") : ""
-
-  route53_records = concat(
-    var.enable_route53 && var.route53_domain_name != "" && var.route53_argocd_subdomain != "" && local.argocd_lb_dns != "" ? [
-      {
-        name    = "${var.route53_argocd_subdomain}.${var.route53_domain_name}"
-        type    = "CNAME"
-        ttl     = var.route53_record_ttl
-        records = [local.argocd_lb_dns]
-      }
-    ] : [],
-    var.enable_route53 && var.route53_domain_name != "" && var.route53_tc3_subdomain != "" && local.nginx_lb_dns != "" ? [
-      {
-        name    = "${var.route53_tc3_subdomain}.${var.route53_domain_name}"
-        type    = "CNAME"
-        ttl     = var.route53_record_ttl
-        records = [local.nginx_lb_dns]
-      }
-    ] : []
-  )
 }
 
 module "route53" {
@@ -96,8 +77,27 @@ module "route53" {
   domain_name   = var.route53_domain_name
   comment       = var.route53_comment
   force_destroy = var.route53_force_destroy
-  records       = local.route53_records
   tags          = var.tags
+}
+
+resource "aws_route53_record" "argocd_cname" {
+  count = var.enable_route53 && var.route53_domain_name != "" && var.route53_argocd_subdomain != "" ? 1 : 0
+
+  zone_id = module.route53[0].zone_id
+  name    = "${var.route53_argocd_subdomain}.${var.route53_domain_name}"
+  type    = "CNAME"
+  ttl     = var.route53_record_ttl
+  records = [local.argocd_lb_dns]
+}
+
+resource "aws_route53_record" "nginx_cname" {
+  count = var.enable_route53 && var.route53_domain_name != "" && var.route53_tc3_subdomain != "" ? 1 : 0
+
+  zone_id = module.route53[0].zone_id
+  name    = "${var.route53_tc3_subdomain}.${var.route53_domain_name}"
+  type    = "CNAME"
+  ttl     = var.route53_record_ttl
+  records = [local.nginx_lb_dns]
 }
 module "apps" {
   source = "./modules/apps"
