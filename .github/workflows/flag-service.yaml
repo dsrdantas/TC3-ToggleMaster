@@ -200,16 +200,22 @@ jobs:
             print(f"SonarCloud task status: {status}")
             raise SystemExit(1)
           
+          from urllib.parse import quote_plus
+
           issues_url = (
             f"{server}/api/issues/search"
-            f"?componentKeys={project_key}"
-            f"{'&organization=' + org if org else ''}"
+            f"?componentKeys={quote_plus(project_key)}"
+            f"{'&organization=' + quote_plus(org) if org else ''}"
             f"&severities=CRITICAL,HIGH"
             f"&types=VULNERABILITY"
             f"&resolved=false"
             f"&sinceLeakPeriod=true"
           )
-          issues = get_json(issues_url)
+          try:
+            issues = get_json(issues_url)
+          except Exception as e:
+            print(f"Erro ao consultar issues: {e}")
+            raise
           total = issues.get("total", 0)
           if total > 0:
             print(f"HIGH/CRITICAL vulnerabilities found (new code): {total}")
