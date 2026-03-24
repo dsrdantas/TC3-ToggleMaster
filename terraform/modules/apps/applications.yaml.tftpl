@@ -1,0 +1,161 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ${gitops_project}
+  namespace: ${argocd_namespace}
+spec:
+  description: ToggleMaster Feature Flag Platform
+  sourceRepos:
+    - '${gitops_repo_url}'
+  destinations:
+    - namespace: ${gitops_namespace}
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: auth-service
+  namespace: ${argocd_namespace}
+  labels:
+    app.kubernetes.io/part-of: ${gitops_project}
+spec:
+  project: ${gitops_project}
+  source:
+    repoURL: ${gitops_repo_url}
+    targetRevision: ${gitops_target_revision}
+    path: gitops/auth-service
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${gitops_namespace}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flag-service
+  namespace: ${argocd_namespace}
+  labels:
+    app.kubernetes.io/part-of: ${gitops_project}
+spec:
+  project: ${gitops_project}
+  source:
+    repoURL: ${gitops_repo_url}
+    targetRevision: ${gitops_target_revision}
+    path: gitops/flag-service
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${gitops_namespace}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: targeting-service
+  namespace: ${argocd_namespace}
+  labels:
+    app.kubernetes.io/part-of: ${gitops_project}
+spec:
+  project: ${gitops_project}
+  source:
+    repoURL: ${gitops_repo_url}
+    targetRevision: ${gitops_target_revision}
+    path: gitops/targeting-service
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${gitops_namespace}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: evaluation-service
+  namespace: ${argocd_namespace}
+  labels:
+    app.kubernetes.io/part-of: ${gitops_project}
+spec:
+  project: ${gitops_project}
+  source:
+    repoURL: ${gitops_repo_url}
+    targetRevision: ${gitops_target_revision}
+    path: gitops/evaluation-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${gitops_namespace}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: analytics-service
+  namespace: ${argocd_namespace}
+  labels:
+    app.kubernetes.io/part-of: ${gitops_project}
+spec:
+  project: ${gitops_project}
+  source:
+    repoURL: ${gitops_repo_url}
+    targetRevision: ${gitops_target_revision}
+    path: gitops/analytics-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${gitops_namespace}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: togglemaster-shared
+  namespace: ${argocd_namespace}
+  labels:
+    app.kubernetes.io/part-of: ${gitops_project}
+spec:
+  project: ${gitops_project}
+  source:
+    repoURL: ${gitops_repo_url}
+    targetRevision: ${gitops_target_revision}
+    path: gitops
+    directory:
+      include: '{namespace.yaml,ingress.yaml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${gitops_namespace}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
