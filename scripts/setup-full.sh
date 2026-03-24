@@ -973,5 +973,7 @@ if [ "${ROUTE53_ENABLED:-false}" = "true" ]; then
   wait_lb_hostname ingress-nginx ingress-nginx-controller "NGINX Ingress"
   echo ""
   echo ">>> Aplicando Route53 (DNS)..."
+  cd "$TERRAFORM_DIR"
   tf_apply "route53" -var enable_route53=true -var enable_apps=true -var enable_argocd_apps=true
+  cd "$PROJECT_DIR"
 fi
