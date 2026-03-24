@@ -344,34 +344,15 @@ configure_kubectl() {
     echo ">>> kubectl nao conectado. Configurando..."
     "$AWS_BIN" eks update-kubeconfig --name "$CLUSTER_NAME" --region us-east-1
     python3 - <<PY 2>/dev/null || true
-import os, re
+import os
 path = os.path.expanduser("~/.kube/config")
-cluster = os.environ.get("CLUSTER_NAME", "togglemaster-cluster")
-region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 try:
     with open(path, "r", encoding="utf-8") as f:
         data = f.read()
-    data = data.replace("client.authentication.k8s.io/v1alpha1", "client.authentication.k8s.io/v1beta1")
-
-    def repl(match):
-        indent = match.group(1)
-        cmd = f"{indent}command: /bin/bash\n"
-        args = (
-            f"{indent}args:\n"
-            f"{indent}- -lc\n"
-            f"{indent}- aws eks get-token --cluster-name {cluster} --region {region} | sed 's/v1alpha1/v1beta1/g'\n"
-        )
-        return f"{indent}exec:\n{indent}  apiVersion: client.authentication.k8s.io/v1beta1\n{cmd}{args}"
-
-    data = re.sub(
-        r"(\\s*)exec:\\n(?:\\s*apiVersion:.*\\n)?(?:\\s*command:.*\\n)?(?:\\s*args:\\n(?:\\s*- .*\\n)*)",
-        repl,
-        data,
-        flags=re.MULTILINE,
-    )
-
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(data)
+    if "client.authentication.k8s.io/v1alpha1" in data:
+        data = data.replace("client.authentication.k8s.io/v1alpha1", "client.authentication.k8s.io/v1beta1")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(data)
 except FileNotFoundError:
     pass
 PY
