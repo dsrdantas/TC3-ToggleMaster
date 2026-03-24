@@ -152,9 +152,6 @@ jobs:
         with:
           scanMetadataReportFile: microservices/analytics-service/.scannerwork/report-task.txt
 
-      - name: SAST - Run bandit
-        run: bandit -r . --severity-level high
-
   docker-build-push:
     name: Docker Build & Push to ECR
     needs: [sca, sast]

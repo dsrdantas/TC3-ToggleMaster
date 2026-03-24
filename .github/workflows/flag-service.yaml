@@ -85,8 +85,8 @@ jobs:
       - name: Run flake8
         run: flake8 --max-line-length=120 .
 
-  security-scan:
-    name: Security Scan (SAST & SCA)
+  sca:
+    name: Security Scan (SCA)
     needs: lint
     if: >-
       ${{ always() &&
@@ -115,16 +115,45 @@ jobs:
           scan-ref: 'microservices/flag-service'
           severity: 'CRITICAL'
           exit-code: '1'
+  sast:
+    name: Security Scan (SAST - SonarCloud)
+    needs: lint
+    if: >-
+      ${{ always() &&
+          (
+            (github.event_name != 'workflow_dispatch' && needs.lint.result == 'success') ||
+            (github.event_name == 'workflow_dispatch' &&
+             (inputs.run_security == true || inputs.run_security == 'true') &&
+             (needs.lint.result == 'success' || needs.lint.result == 'skipped'))
+          ) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: SAST - Install bandit
-        run: pip install bandit
+      - name: SonarCloud Scan (SAST)
+        uses: sonarsource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: microservices/flag-service
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=.
 
-      - name: SAST - Run bandit
-        run: bandit -r . --severity-level high
+      - name: SonarCloud Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          scanMetadataReportFile: microservices/flag-service/.scannerwork/report-task.txt
 
   docker-build-push:
     name: Docker Build & Push to ECR
-    needs: security-scan
+    needs: [sca, sast]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

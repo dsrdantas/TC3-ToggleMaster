@@ -86,8 +86,8 @@ jobs:
           version: v1.61
           working-directory: microservices/auth-service
 
-  security-scan:
-    name: Security Scan (SAST & SCA)
+  sca:
+    name: Security Scan (SCA)
     needs: lint
     if: >-
       ${{ always() &&
@@ -104,11 +104,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-
       - name: SCA - Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -116,17 +111,45 @@ jobs:
           scan-ref: 'microservices/auth-service'
           severity: 'CRITICAL'
           exit-code: '1'
+  sast:
+    name: Security Scan (SAST - SonarCloud)
+    needs: lint
+    if: >-
+      ${{ always() &&
+          (
+            (github.event_name != 'workflow_dispatch' && needs.lint.result == 'success') ||
+            (github.event_name == 'workflow_dispatch' &&
+             (inputs.run_security == true || inputs.run_security == 'true') &&
+             (needs.lint.result == 'success' || needs.lint.result == 'skipped'))
+          ) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: SAST - Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.20.0
+      - name: SonarCloud Scan (SAST)
+        uses: sonarsource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: microservices/auth-service
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=.
 
-      - name: SAST - Run gosec
-        run: gosec ./...
-        continue-on-error: true
+      - name: SonarCloud Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          scanMetadataReportFile: microservices/auth-service/.scannerwork/report-task.txt
 
   docker-build-push:
     name: Docker Build & Push to ECR
-    needs: security-scan
+    needs: [sca, sast]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
