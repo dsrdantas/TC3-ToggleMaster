@@ -225,6 +225,27 @@ Push (microservices/<service>/**)
         Commit automatico via github-actions[bot]
 ```
 
+### SonarCloud: Quality Gate e Variaveis
+
+**Onde pegar os valores (SonarCloud):**
+1. **Organization Key**  
+   SonarCloud → Organization → Administration → Organization Settings → **Organization Key**  
+   (URL tipico: `https://sonarcloud.io/organizations/<orgKey>`)
+
+2. **Project Key**  
+   SonarCloud → Project → Administration → Project Settings → **General** → **Project Key**
+
+3. **Token**  
+   SonarCloud → My Account → Security → **Generate Token**
+
+**Como configurar o Quality Gate para bloquear em CRITICAL:**
+1. SonarCloud → **Quality Gates** → selecione o gate desejado (ou crie um novo).
+2. Adicione/ajuste a condicao **Security Rating** ou **New Vulnerabilities** para **Critical**.
+3. Associe o Quality Gate ao projeto em:  
+   Project → Administration → **Quality Gate**.
+
+> O pipeline falha quando o Quality Gate reprova. Mantenha o gate configurado para bloquear CRITICAL.
+
 ---
 
 ## GitOps com ArgoCD
