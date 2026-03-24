@@ -148,9 +148,10 @@ jobs:
             -Dsonar.sources=.
 
       - name: SonarCloud Quality Gate
-        uses: sonarsource/sonarcloud-quality-gate-action@v1.1.0
+        uses: SonarSource/sonarqube-quality-gate-action@v1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
       - name: SAST - Run bandit
         run: bandit -r . --severity-level high
