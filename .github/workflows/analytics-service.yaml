@@ -130,6 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -162,6 +163,7 @@ jobs:
           server = os.environ.get("SONAR_HOST_URL", "https://sonarcloud.io").rstrip("/")
           token = os.environ["SONAR_TOKEN"]
           project_key = os.environ.get("SONAR_PROJECT_KEY")
+          org = os.environ.get("SONAR_ORGANIZATION")
           
           if not project_key:
             print("SONAR_PROJECT_KEY nao definido")
@@ -202,6 +204,7 @@ jobs:
           issues_url = (
             f"{server}/api/issues/search"
             f"?componentKeys={project_key}"
+            f"{'&organization=' + org if org else ''}"
             f"&severities=CRITICAL,HIGH"
             f"&types=VULNERABILITY"
             f"&resolved=false"
