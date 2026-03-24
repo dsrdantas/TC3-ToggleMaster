@@ -152,6 +152,8 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          scanMetadataReportFile: microservices/analytics-service/.scannerwork/report-task.txt
 
       - name: SAST - Run bandit
         run: bandit -r . --severity-level high
