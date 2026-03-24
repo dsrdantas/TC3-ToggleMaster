@@ -208,8 +208,7 @@ jobs:
           issues_query = {
             "componentKeys": project_key,
             "severities": "CRITICAL,MAJOR",
-            "types": "VULNERABILITY,SECURITY_HOTSPOT",
-            "tags": "security",
+            "types": "VULNERABILITY",
             "resolved": "false",
             "sinceLeakPeriod": "true",
           }
@@ -224,8 +223,7 @@ jobs:
             fallback_query = {
               "componentKeys": project_key,
               "severities": "CRITICAL,MAJOR",
-              "types": "VULNERABILITY,SECURITY_HOTSPOT",
-              "tags": "security",
+              "types": "VULNERABILITY",
               "resolved": "false",
             }
             if org:
@@ -237,7 +235,37 @@ jobs:
             print(f"MAJOR/CRITICAL vulnerabilities found (new code): {total}")
             raise SystemExit(1)
           
-          print("No MAJOR/CRITICAL vulnerabilities on new code.")
+          # Security Hotspots (API separada)
+          hotspot_query = {
+            "projectKey": project_key,
+            "status": "TO_REVIEW",
+            "sinceLeakPeriod": "true",
+          }
+          if org:
+            hotspot_query["organization"] = org
+          hotspot_url = f"{server}/api/hotspots/search?{urlencode(hotspot_query)}"
+          try:
+            hotspots = get_json(hotspot_url)
+          except Exception as e:
+            print(f"Erro ao consultar hotspots (new code): {e}")
+            fallback_hotspot_query = {
+              "projectKey": project_key,
+              "status": "TO_REVIEW",
+            }
+            if org:
+              fallback_hotspot_query["organization"] = org
+            fallback_hotspot_url = f"{server}/api/hotspots/search?{urlencode(fallback_hotspot_query)}"
+            hotspots = get_json(fallback_hotspot_url)
+
+          high_hotspots = [
+            h for h in hotspots.get("hotspots", [])
+            if h.get("vulnerabilityProbability") == "HIGH"
+          ]
+          if high_hotspots:
+            print(f"HIGH security hotspots found (new code): {len(high_hotspots)}")
+            raise SystemExit(1)
+
+          print("No MAJOR/CRITICAL vulnerabilities or HIGH hotspots on new code.")
           PY
 
   docker-build-push:
