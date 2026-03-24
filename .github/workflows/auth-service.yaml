@@ -123,6 +123,8 @@ jobs:
              (needs.lint.result == 'success' || needs.lint.result == 'skipped'))
           ) }}
     runs-on: ubuntu-latest
+    env:
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
