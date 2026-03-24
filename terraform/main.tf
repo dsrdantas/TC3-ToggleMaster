@@ -81,7 +81,7 @@ module "route53" {
 }
 
 resource "aws_route53_record" "argocd_cname" {
-  count = var.enable_route53 && var.route53_domain_name != "" && var.route53_argocd_subdomain != "" && local.argocd_lb_dns != "" ? 1 : 0
+  count = var.enable_route53 && var.route53_domain_name != "" && var.route53_argocd_subdomain != "" ? 1 : 0
 
   zone_id = module.route53[0].zone_id
   name    = "${var.route53_argocd_subdomain}.${var.route53_domain_name}"
@@ -93,10 +93,17 @@ resource "aws_route53_record" "argocd_cname" {
     module.apps,
     time_sleep.wait_for_lb
   ]
+
+  lifecycle {
+    precondition {
+      condition     = local.argocd_lb_dns != ""
+      error_message = "argocd LB DNS ainda indisponivel. Aguarde e rode terraform apply novamente."
+    }
+  }
 }
 
 resource "aws_route53_record" "nginx_cname" {
-  count = var.enable_route53 && var.route53_domain_name != "" && var.route53_tc3_subdomain != "" && local.nginx_lb_dns != "" ? 1 : 0
+  count = var.enable_route53 && var.route53_domain_name != "" && var.route53_tc3_subdomain != "" ? 1 : 0
 
   zone_id = module.route53[0].zone_id
   name    = "${var.route53_tc3_subdomain}.${var.route53_domain_name}"
@@ -108,6 +115,13 @@ resource "aws_route53_record" "nginx_cname" {
     module.apps,
     time_sleep.wait_for_lb
   ]
+
+  lifecycle {
+    precondition {
+      condition     = local.nginx_lb_dns != ""
+      error_message = "nginx LB DNS ainda indisponivel. Aguarde e rode terraform apply novamente."
+    }
+  }
 }
 module "apps" {
   source = "./modules/apps"
