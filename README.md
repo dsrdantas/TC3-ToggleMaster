@@ -186,6 +186,7 @@ No GitHub: Settings > Secrets and variables > Actions:
 | `AWS_ACCESS_KEY_ID` | Access Key da sessao |
 | `AWS_SECRET_ACCESS_KEY` | Secret Key |
 | `AWS_SESSION_TOKEN` | Session Token |
+| `AWS_REGION` | Regiao AWS (ex: us-east-1) |
 | `ECR_REGISTRY` | `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com` |
 | `SONAR_TOKEN` | Token do SonarCloud |
 | `SONAR_ORGANIZATION` | Organization Key do SonarCloud |
