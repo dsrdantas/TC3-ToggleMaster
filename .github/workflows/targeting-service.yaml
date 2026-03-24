@@ -212,7 +212,8 @@ jobs:
           issues_query = {
             "componentKeys": project_key,
             "severities": "CRITICAL,MAJOR",
-            "types": "VULNERABILITY",
+            "types": "VULNERABILITY,SECURITY_HOTSPOT",
+            "tags": "security",
             "resolved": "false",
             "sinceLeakPeriod": "true",
           }
@@ -227,7 +228,8 @@ jobs:
             fallback_query = {
               "componentKeys": project_key,
               "severities": "CRITICAL,MAJOR",
-              "types": "VULNERABILITY",
+              "types": "VULNERABILITY,SECURITY_HOTSPOT",
+              "tags": "security",
               "resolved": "false",
             }
             if org:
