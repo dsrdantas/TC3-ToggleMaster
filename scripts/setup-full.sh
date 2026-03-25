@@ -309,7 +309,12 @@ ensure_backend() {
 }
 
 has_module_apps() {
-  terraform state list 2>/dev/null | grep -q '^module.apps\.'
+  local out
+  if ! out=$(cd "$TERRAFORM_DIR" && terraform state list 2>/dev/null); then
+    echo "WARN: nao foi possivel ler o state. Pulando apply com enable_apps=false para evitar destroy."
+    return 0
+  fi
+  echo "$out" | grep -q '^module.apps\.'
 }
 
 tf_plan_only() {

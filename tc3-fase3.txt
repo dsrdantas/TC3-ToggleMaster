@@ -15,7 +15,7 @@ Breve resumo dos desafios encontrados e decisões tomadas.
 Desafios encontrados:
 
 Desafio com token do AWS Academy sendo necessário atualiza-los constantemente.
-Desafio com o SonarQube Cloud Free tier por conta de não ser possivel criar seu proprio profile de Quality Gate
+Desafio com o SonarQube Cloud Free tier por conta de não ser possivel criar seu proprio profile de Quality Gate, no fim desistimos do sonarqube por limitações e utilizamos ferramentas locais para sast e sca. 
 Desafio com o shell do AWS Academy que utiliza um awscli antigo causando incompatibilidade com kubectl/helm para aplicar manifestos do cluster EKS
 
 Soluções:
