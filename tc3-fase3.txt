@@ -7,8 +7,9 @@ https://github.com/dsrdantas/TC3-ToggleMaster
 
 
 Documentação e estrutura: https://github.com/dsrdantas/TC3-ToggleMaster/blob/main/README.md
-Video:
-Print estimativa de custos: 
+Video: https://github.com/dsrdantas/TC3-ToggleMaster/blob/main/tc3-video.mp4
+Print estimativa de custos: https://github.com/dsrdantas/TC3-ToggleMaster/blob/main/aws-estimativa.png
+Link estimativa: https://calculator.aws/#/estimate?id=0038608d7aa83e6e9897d343ef476a32ca88b32b
 
 Breve resumo dos desafios encontrados e decisões tomadas.
 
