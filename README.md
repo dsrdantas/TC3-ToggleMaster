@@ -8,6 +8,18 @@ Plataforma de Feature Flags com 5 microsservicos, infraestrutura automatizada vi
 
 ---
 
+## Dados do Repositorio
+
+- **Participante:** Daniel da Silva Rodrigues Dantas — RM367539 — Discord: `pl0c_`
+- **Participante:** Thiago Viegas — RM367590 — Discord: `oviegas_60314`
+- **Repo:** https://github.com/dsrdantas/TC3-ToggleMaster
+- **Documentacao:** https://github.com/dsrdantas/TC3-ToggleMaster/blob/main/README.md
+- **Video:** https://github.com/dsrdantas/TC3-ToggleMaster/blob/main/tc3-video.mp4
+- **Print estimativa de custos:** https://github.com/dsrdantas/TC3-ToggleMaster/blob/main/aws-estimativa.png
+- **Link estimativa:** https://calculator.aws/#/estimate?id=0038608d7aa83e6e9897d343ef476a32ca88b32b
+
+---
+
 ## Estrutura do Projeto
 
 ```
@@ -52,7 +64,6 @@ TC3-ToggleMaster/
 │   └── analytics-service.yaml
 ├── scripts/                # Scripts de automacao
 │   ├── setup-full.sh       # Setup completo (orquestra tudo)
-│   ├── destroy-all.sh      # Destruir tudo criado via Terraform
 │   ├── aws-academy-setup.sh# Configura/valida credenciais AWS Academy
 │   ├── generate-api-key.sh # Wrapper (usa setup-full.sh --gen-api-key)
 │   └── generate-report-pdf.py  # Gera relatorio de entrega em PDF
@@ -234,6 +245,14 @@ Push (microservices/<service>/**)
         Atualiza image tag em gitops/<service>/deployment.yaml
         Commit automatico via github-actions[bot]
 ```
+
+---
+
+## Alteracoes Recentes
+
+- `setup-full.sh` unificado com `destroy-all` e suporte a comandos (`--plan`, `--apply`, `--create`, `--destroy-all`, `--gen-api-key`).
+- DNS via Route53 (hosted zone + CNAMEs) configurado automaticamente quando habilitado.
+- Fluxo manual em fases (infra → ingress → DNS) documentado para evitar falhas de LB.
 
 ---
 
